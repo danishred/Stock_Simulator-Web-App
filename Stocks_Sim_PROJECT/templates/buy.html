@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Buy
+{% endblock %}
+
+{% block main %}
+<p style="font-size:larger ;">
+    Cash you have <br> -- {{ usrcsh | usd }} -- <br>
+</p>
+<form action="/buy" method="post">
+    <div class="mb-3">
+        <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="symbol"
+            placeholder="Enter stock's symbol" type="text">
+    </div>
+    <div class="mb-3">
+        <input autocomplete="off" class="form-control mx-auto w-auto" name="shares" placeholder="Enter no. of shares"
+            type="number">
+    </div>
+    <button class="btn btn-primary" type="submit">Buy</button>
+</form>
+{% endblock %}

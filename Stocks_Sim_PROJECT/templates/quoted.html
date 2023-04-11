@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Quoted
+{% endblock %}
+
+{% block main %}
+
+
+<p class="solid container"  style="font-size: xx-large; font-family: 'Courier New';">
+    
+    A share of {{ lookstks.name }} ({{ lookstks.symbol }}) costs <br><br> {{ lookstks.price | usd }} <br>
+</p>
+{% endblock %}

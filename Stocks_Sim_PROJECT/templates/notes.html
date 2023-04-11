@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Notes
+{% endblock %}
+
+{% block main %}
+<form action="/notes" method="post">
+    <div class="mb-3">
+
+        <textarea required autocomplete="off" class="form-control container" style="max-width: 60rem;" rows="8"
+            id="notes" name="notes" placeholder="Write something"></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Add Note</button>
+</form>
+
+<br>
+<hr>
+{% for notesdict in notesdicts %}
+
+
+<br>
+
+
+    <div class=" card container " style="max-width: 40rem;">
+        <div class="card-body ">
+            <p class="card-text">{{ notesdict.data }}</p>
+            <div class="card-footer text-body-secondary">
+                {{ notesdict.date }}
+            </div><br>
+            <form action="/delnotes" method="post">
+                <input name="serial" type="hidden" value="{{ notesdict.serial }}">
+                <input  type="submit" value="Delete">
+            </form>
+        </div>
+    </div>
+
+<br>
+
+
+
+
+{% endfor %}
+{% endblock %}

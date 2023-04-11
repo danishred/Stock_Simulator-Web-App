@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Quote
+{% endblock %}
+
+{% block main %}
+
+
+    <form action="/quote" method="post">
+        <div class="mb-3">
+            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="username" name="symbol" placeholder="Enter Stock's Symbol" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+
+    <br>
+    <p style="font-size:medium; font-family:  'Arial Narrow'; opacity:0.5;">Examples:- <br> AAPL, NFLX, MSFT, AMZN,<br> GOOG, TSLA - e.t.c. </p>
+{% endblock %}
