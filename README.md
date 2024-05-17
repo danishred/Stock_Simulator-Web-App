@@ -1,2 +1,1 @@
-# WebDev
-### Check out my webdev projects :)
+You will find my Development projects here.
