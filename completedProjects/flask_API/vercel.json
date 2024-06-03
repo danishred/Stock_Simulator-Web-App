@@ -7,5 +7,10 @@
       "config":{"runtime":"Python 3.10.12"}
     }
   ],
-  "routes": []
+  "routes": [
+    {
+      "src":"./index.py",
+      "dest":"/"
+    }
+  ]
 }
