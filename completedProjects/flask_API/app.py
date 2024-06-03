@@ -1,11 +1,23 @@
 # Using flask to make an api 
 # import necessary libraries and functions 
-from flask import Flask, jsonify 
+from flask import Flask, jsonify, request
 
 # creating a Flask app 
 app = Flask(__name__) 
 
+
 # on the terminal type: curl http://127.0.0.1:5000/ 
+# returns hello world when we use GET. 
+# returns the data that we send when we use POST. 
+@app.route('/', methods = ['GET', 'POST']) 
+def home(): 
+    if(request.method == 'GET'): 
+  
+        data = "hello world"
+        return jsonify({'data': data}) 
+  
+
+# on the terminal type: curl http://127.0.0.1:5000/login/userid,password
 # creating login route
 @app.route('/login/<username>,<password>', methods = ['GET', 'POST']) 
 def login(username, password):
