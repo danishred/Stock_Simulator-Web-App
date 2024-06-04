@@ -16,20 +16,25 @@ def index():
 
 # on the terminal type: curl http://127.0.0.1:5000/login/userid,password
 # creating login route
-@app.route('/login/<username>,<password>', methods = ['GET', 'POST']) 
+
+# Use POST if user reached route via POST (as by submitting a form via POST)
+# Use GET or nothing if user reached route via GET (as by clicking a link 
+# or via redirect)
+# Data sent through link is not considered as POST but GET as in below example
+@app.route('/login/<username>,<password>', methods=["GET"]) 
 def login(username, password):
     
     # checking hardcoded User ID and Password
     if username == "mohsin" and password == "admin123":
-        return jsonify({'prompt': "Access Granted"})
+        return jsonify({"Prompt":"Access Granted"})
     elif username == "tabrez" and password == "admin456":
-        return jsonify({'prompt': "Access Granted"})
+        return jsonify({"Prompt":"Access Granted"})
     elif username == "yasir" and password == "admin789":
-        return jsonify({'prompt': "Access Granted"})
+        return jsonify({"Prompt":"Access Granted"})
     elif username == "ahsan" and password == "admin0":
-        return jsonify({'prompt': "Access Granted"})
+        return jsonify({"Prompt":"Access Granted"})
     else:
-        return jsonify({'prompt': "User not found"})
+        return jsonify({"Prompt":'User not found or wrong password'})
 
 if __name__ == '__main__': 
     app.run(debug = True) 
