@@ -1,9 +1,13 @@
 # Using flask to make an api 
 # import necessary libraries and functions 
 from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+
 
 # creating a Flask app 
 app = Flask(__name__) 
+CORS(app)
 
 
 # on the terminal type: curl http://127.0.0.1:5000/ 
