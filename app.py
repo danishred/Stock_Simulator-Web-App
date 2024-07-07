@@ -7,8 +7,10 @@ from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from tempfile import mkdtemp
 from werkzeug.security import check_password_hash, generate_password_hash
-
+from dotenv import load_dotenv
 from helpers import apology, login_required, lookup, usd
+
+load_dotenv
 
 # Load JSON content to a dictionary
 with open("output_file.json") as file:
@@ -27,11 +29,6 @@ Session(app)
 
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///stocks.db")
-
-# Make sure API key is set
-if not os.environ.get("API_KEY"):
-    raise RuntimeError("API_KEY not set")
-
 
 @app.after_request
 def after_request(response):
@@ -154,8 +151,8 @@ def buy():
         # Inserting stock details if bought first time
         if liveshares == None:
             liveshares = 0
-            db.execute("INSERT INTO liveindex(id, symbol, name, liveshares, liveprice) \
-                    VALUES(?, ?, ?, ?, ?)", session["user_id"], symbol.upper(), buystks["name"],
+            db.execute("INSERT INTO liveindex(id, symbol, liveshares, liveprice) \
+                    VALUES(?, ?, ?, ?)", session["user_id"], symbol.upper(),
                        shares, buystks["price"])
 
         # Updating history table for the current share bought
@@ -206,7 +203,6 @@ def login():
 
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
-
         # Ensure username was submitted
         if not request.form.get("username"):
             return apology("must provide username", 403)
