@@ -5,6 +5,17 @@ from helpers import apology, login_required, lookup, usd
 import re
 from cs50 import SQL
 from werkzeug.security import check_password_hash, generate_password_hash
+import random
+import psycopg2 # Driver to interact with PSQL
+import psycopg2.extras # Allows referencing as dictionary
+from dotenv import load_dotenv # Allows loading environment variables
+from model.user_model import user_model
+
+# obj for user_model
+obj = user_model()
+
+# Loading environment variables
+load_dotenv()
 
 # Load JSON content to a dictionary
 with open("output_file.json") as file:
@@ -12,8 +23,6 @@ with open("output_file.json") as file:
 
 # Custom filter
 app.jinja_env.filters["usd"] = usd
-
-db = SQL("sqlite:///stocks.db")
 
 @app.after_request
 def after_request(response):
@@ -29,15 +38,7 @@ def after_request(response):
 def index():
     """Show portfolio of stocks"""
 
-    # Fetching cash in list and storing in variable
-    cash = db.execute("SELECT cash FROM users WHERE id = ?",
-                      session["user_id"])
-    usrcsh = float(cash[0]["cash"])
-
-    # Fetching name of current user
-    currentuser = db.execute(
-        "SELECT username FROM users WHERE id = ?", session["user_id"])
-    currentuser = currentuser[0]["username"]
+    obj.fetch_user_details()
 
     # Conditions for GET
     if request.method == "GET":

@@ -1,10 +1,10 @@
-import os
-from flask import Flask, flash, redirect, render_template, request, session
+from flask import Flask 
 from flask_session import Session
 from flask_cors import CORS
 from redis import Redis
 from dotenv import load_dotenv
 from datetime import timedelta
+import os
 
 load_dotenv()
 
