@@ -11,7 +11,7 @@ with open("output_file.json") as file:
 # Custom filter
 app.jinja_env.filters["usd"] = usd
 
-
+db = SQL("sqlite:///stocks.db")
 
 @app.after_request
 def after_request(response):
