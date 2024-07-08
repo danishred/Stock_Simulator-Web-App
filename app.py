@@ -9,6 +9,8 @@ from tempfile import mkdtemp
 from werkzeug.security import check_password_hash, generate_password_hash
 from dotenv import load_dotenv
 from helpers import apology, login_required, lookup, usd
+import psycopg2 # Driver to interact with PSQL
+import psycopg2.extras # Allows referencing as dictionary
 
 load_dotenv
 
