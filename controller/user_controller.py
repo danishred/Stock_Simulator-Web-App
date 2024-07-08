@@ -3,6 +3,8 @@ from flask import json, jsonify, flash, redirect, render_template, request, sess
 # from model.user_model import user_model
 from helpers import apology, login_required, lookup, usd
 import re
+from cs50 import SQL
+from werkzeug.security import check_password_hash, generate_password_hash
 
 # Load JSON content to a dictionary
 with open("output_file.json") as file:
