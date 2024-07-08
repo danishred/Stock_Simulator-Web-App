@@ -1,13 +1,9 @@
+from decimal import Decimal
 from app import app
-from flask import json, jsonify, flash, redirect, render_template, request, session
-# from model.user_model import user_model
+from flask import json, flash, redirect, render_template, request, session
 from helpers import apology, login_required, lookup, usd
-import re
-from cs50 import SQL
 from werkzeug.security import check_password_hash, generate_password_hash
 import random
-import psycopg2 # Driver to interact with PSQL
-import psycopg2.extras # Allows referencing as dictionary
 from dotenv import load_dotenv # Allows loading environment variables
 from model.user_model import user_model
 
@@ -38,14 +34,20 @@ def after_request(response):
 def index():
     """Show portfolio of stocks"""
 
-    obj.fetch_user_details()
+    # Create all tables if not exists
+    obj.create_table()
+
+    # Fetching user cash of current session 
+    usrcsh = obj.fetch_total_cash(session["user_id"])
+
+    # Fetching name of current user
+    currentuser = obj.fetch_user_name(session["user_id"])
 
     # Conditions for GET
     if request.method == "GET":
 
         # Fetching liveindex in list
-        liveindexes = db.execute(
-            "select * from liveindex where id = ?", session["user_id"])
+        liveindexes = obj.fetch_liveindex(session["user_id"])
 
         # Storing latest data in list
         currentlooks = []
@@ -54,17 +56,17 @@ def index():
 
         # Updating latest for liveindex
         for currentlook in currentlooks:
-            db.execute("UPDATE liveindex SET liveprice = ?  WHERE id = ? AND symbol = ?",
-                       currentlook["price"], session["user_id"], currentlook["symbol"])
+            obj.update_liveindex(currentlook["price"], session["user_id"], currentlook["symbol"])
 
-        # Calculation total cash possesion in the form of shares
+        # Calculation total cash possession in the form of shares
         ttlshr = 0
         for liveindex in liveindexes:
-            ttlshr = ttlshr + (liveindex["liveprice"]*liveindex["liveshares"])
+            ttlshr += liveindex["liveprice"] * liveindex["liveshares"]
 
         # Rendering page and passing variables
         return render_template("index.html", liveindexes=liveindexes,
                                usrcsh=usrcsh, ttlshr=ttlshr, currentuser=currentuser)
+
 
     # Conditions for POST
     if request.method == "POST":
@@ -76,8 +78,9 @@ def index():
             return apology("please enter cash amount")
 
         # Adding more cash to account
-        db.execute("UPDATE users SET cash = ? WHERE id = ?",
-                   usrcsh + float(addcash), session["user_id"])
+        usrcsh = Decimal(usrcsh)  # Ensure usrcsh is a Decimal
+        addcash_decimal = Decimal(addcash)  # Convert addcash to Decimal
+        obj.update_user_cash(usrcsh + addcash_decimal, session["user_id"])
 
         # Redirecting
         flash('Cash Added !!!')
@@ -90,14 +93,10 @@ def buy():
     """Buy shares of stock"""
 
     # Fetching cash value of user
-    cash = db.execute("SELECT cash FROM users WHERE id = ?",
-                      session["user_id"])
-    usrcsh = float(cash[0]["cash"])
+    usrcsh = obj.fetch_total_cash(session["user_id"])
 
     # Fetching name of current user
-    currentuser = db.execute(
-        "SELECT username FROM users WHERE id = ?", session["user_id"])
-    currentuser = currentuser[0]["username"]
+    currentuser = obj.fetch_user_name(session["user_id"])
 
     # Conditions for POST
     if request.method == "POST":
@@ -113,48 +112,43 @@ def buy():
         if not shares:
             return apology("No input in no. of shares")
 
-        if shares.isnumeric() != True:
+        if not shares.isnumeric():
             return apology("Shares is not numeric")
 
         if int(shares) < 0:
             return apology("Shares can't be negative")
 
-            # Fetching latest details of current stock
+        # Fetching latest details of current stock
         buystks = lookup(symbol.upper())
-        if buystks == None:
+        if buystks is None:
             return apology("invalid symbol")
 
-        if usrcsh < float(shares)*(buystks["price"]):
+        if usrcsh < float(shares) * buystks["price"]:
             return apology("insufficient funds")
 
         # Fetching shares bought before
-        prevshr = db.execute("select sum(liveshares) from liveindex where id = ? AND\
-                              symbol = ?", session["user_id"], symbol.upper())
+        prevshr = obj.fetching_shares_bought(session["user_id"], symbol.upper())
 
         # Total previously bought share of the stock
-        liveshares = prevshr[0]["sum(liveshares)"]
+        liveshares = prevshr[0] if prevshr is not None else 0
 
         # Inserting stock details if bought first time
-        if liveshares == None:
+        if liveshares == 0:
+            obj.insert_liveindex(session["user_id"], symbol.upper(), shares, buystks["price"])
+        
+        # Ensure liveshares is initialized properly
+        if liveshares is None:
             liveshares = 0
-            db.execute("INSERT INTO liveindex(id, symbol, liveshares, liveprice) \
-                    VALUES(?, ?, ?, ?)", session["user_id"], symbol.upper(),
-                       shares, buystks["price"])
-
-        # Updating history table for the current share bought
-        db.execute(
-            "INSERT INTO history(id, symbol, shares, price, date) \
-            VALUES(?, ?, ?, ?, (SELECT DATETIME('now','localtime')))",
-            session["user_id"], symbol.upper(), shares, buystks["price"])
+            
+        # Updating hisstory table for the current share bought
+        obj.insert_history(session["user_id"], symbol.upper(), shares, buystks["price"])
 
         # Updating total shares bought
         liveshares += int(shares)
-        db.execute("UPDATE liveindex SET liveshares = ? where id = ? and symbol = ?",
-                   liveshares, session["user_id"], symbol.upper())
+        obj.update_liveindex_shares(liveshares, session["user_id"], symbol.upper())
 
         # Debiting cash
-        db.execute("UPDATE users SET cash = ?  WHERE id = ?",
-                   usrcsh - float(shares)*(buystks["price"]), session["user_id"])
+        obj.update_user_cash(usrcsh - Decimal(shares) * Decimal(buystks["price"]), session["user_id"])
 
         flash('Share/s Bought Successfully !!!')
         return redirect("/")
@@ -164,23 +158,20 @@ def buy():
         return render_template("buy.html", usrcsh=usrcsh, currentuser=currentuser)
 
 
-@ app.route("/history")
-@ login_required
+@app.route("/history")
+@login_required
 def history():
     """Show history of transactions"""
 
     # Fetching name of current user
-    currentuser = db.execute(
-        "SELECT username FROM users WHERE id = ?", session["user_id"])
-    currentuser = currentuser[0]["username"]
+    currentuser = obj.fetch_user_name(session["user_id"])
 
     # Fetching and passing history table
-    histories = db.execute(
-        "SELECT * FROM history where id = ?", session["user_id"])
+    histories = obj.fetch_history(session["user_id"])
     return render_template("history.html", histories=histories, currentuser=currentuser)
 
 
-@ app.route("/login", methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     """Log user in"""
 
@@ -198,15 +189,14 @@ def login():
             return apology("must provide password", 403)
 
         # Query database for username
-        rows = db.execute("SELECT * FROM users WHERE username = ?",
-                          request.form.get("username"))
+        user = obj.fetch_user_by_username(request.form.get("username"))
 
         # Ensure username exists and password is correct
-        if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
+        if len(user) != 1 or not check_password_hash(user[0]["hash"], request.form.get("password")):
             return apology("invalid username and/or password", 403)
 
         # Remember which user has logged in
-        session["user_id"] = rows[0]["id"]
+        session["user_id"] = user[0]["id"]
 
         # Redirect user to home page
         return redirect("/")
@@ -216,7 +206,7 @@ def login():
         return render_template("login.html")
 
 
-@ app.route("/logout")
+@app.route("/logout")
 def logout():
     """Log user out"""
 
@@ -227,20 +217,18 @@ def logout():
     return redirect("/")
 
 
-@ app.route("/quote", methods=["GET", "POST"])
-@ login_required
+@app.route("/quote", methods=["GET", "POST"])
+@login_required
 def quote():
     """Get stock quote."""
     # Fetching name of current user
-    currentuser = db.execute(
-        "SELECT username FROM users WHERE id = ?", session["user_id"])
-    currentuser = currentuser[0]["username"]
+    currentuser = obj.fetch_user_name(session["user_id"])
 
-    # Condtion for GET
+    # Condition for GET
     if request.method == "GET":
         return render_template("quote.html", currentuser=currentuser)
 
-    # Condtion for POST
+    # Condition for POST
     if request.method == "POST":
         symbol = request.form.get("symbol")
 
@@ -249,13 +237,13 @@ def quote():
             return apology("provide input")
 
         lookstks = lookup(symbol.upper())
-        if lookstks == None:
+        if lookstks is None:
             return apology("invalid symbol provided")
 
         return render_template("quoted.html", lookstks=lookstks, currentuser=currentuser)
 
 
-@ app.route("/register", methods=["GET", "POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user"""
 
@@ -268,9 +256,7 @@ def register():
         confirmation = request.form.get("confirmation")
 
         # Performing checks
-        user = db.execute("SELECT * from users WHERE username = ?",
-                          request.form.get("username"))
-        if len(user) == 1:
+        if obj.fetch_user_by_username(username):
             return apology("username already exists")
 
         if not username:
@@ -286,12 +272,12 @@ def register():
             return apology("Passwords do not match (case sensitive)")
 
         # Inserting user details in table
-        db.execute("INSERT INTO users (username, hash) VALUES(?, ?)",
-                   username, generate_password_hash(password))
+        obj.insert_user(username, generate_password_hash(password))
 
         return redirect("/")
     # Conditions for GET
     if request.method == "GET":
+        flash('User Registered Successfully !!!')
         return render_template("register.html")
 
 
@@ -301,9 +287,7 @@ def sell():
     """Sell shares of stock"""
 
     # Fetching name of current user
-    currentuser = db.execute(
-        "SELECT username FROM users WHERE id = ?", session["user_id"])
-    currentuser = currentuser[0]["username"]
+    currentuser = obj.fetch_user_name(session["user_id"])
 
     # Conditions for POST
     if request.method == "POST":
@@ -318,47 +302,38 @@ def sell():
         if not shares:
             return apology("missing shares")
 
-            # Total shares of current stock
-        sharescnt = db.execute(
-            "SELECT liveshares from liveindex WHERE id = ? AND symbol = ?",
-            session["user_id"], symbol.upper())
+        # Total shares of current stock
+        sharescnt = obj.fetch_liveindex_shares(session["user_id"], symbol.upper())
         if not sharescnt:
             return apology("you don't own any shares of this stock")
 
         if int(shares) > int(sharescnt[0]["liveshares"]):
             return apology("you don't possess that many shares")
 
-        # Updating no. of shares possesed after selling
+        # Updating no. of shares possessed after selling
         sellstks = lookup(symbol.upper())
-        db.execute("UPDATE liveindex SET liveshares = ?  WHERE id = ? AND symbol = ?",
-                   int(sharescnt[0]["liveshares"]) - int(shares), session["user_id"], symbol.upper())
+        obj.update_liveindex_shares(int(sharescnt[0]["liveshares"]) - int(shares), session["user_id"], symbol.upper())
 
         # Updating history table for the current share sold
-        db.execute(
-            "INSERT INTO history(id, symbol, shares, price, date) \
-            VALUES(?, ?, ?, ?, (SELECT DATETIME('now','localtime')))",
-            session["user_id"], symbol.upper(), -int(shares), sellstks["price"])
+        obj.insert_history(session["user_id"], symbol.upper(), -int(shares), sellstks["price"])
 
         # Crediting cash in users account
-        cash = db.execute("SELECT cash FROM users WHERE id = ?",
-                          session["user_id"])
-        usrcsh = float(cash[0]["cash"])
-        db.execute("UPDATE users SET cash = ?  WHERE id = ?",
-                   usrcsh + float(shares)*(sellstks["price"]), session["user_id"])
+        usrcsh = obj.fetch_total_cash()
+        obj.update_user_cash(usrcsh + float(shares) * sellstks["price"], session["user_id"])
 
         # Deleting shares that have 0 stocks
-        db.execute("DELETE FROM liveindex WHERE liveshares = 0")
+        obj.delete_zero_shares()
 
-        # Redirectinf to homepage
+        # Redirecting to homepage
         flash('Share/s Sold Successfully !!!')
         return redirect("/")
 
-    # Condtions for GET
+    # Conditions for GET
     if request.method == "GET":
 
-        # fetching and passing stock symbols possessed by user
-        symbols = db.execute(
-            "SELECT * FROM liveindex WHERE id = ?", session["user_id"])
+        # Fetching and passing stock symbols possessed by user
+        symbols = obj.fetch_user_symbols(session["user_id"])
+        print(symbols)
         return render_template("sell.html", symbols=symbols, currentuser=currentuser)
 
 
@@ -368,14 +343,11 @@ def notes():
     """Add your notes"""
 
     # Fetching name of current user
-    currentuser = db.execute(
-        "SELECT username FROM users WHERE id = ?", session["user_id"])
-    currentuser = currentuser[0]["username"]
+    currentuser = obj.fetch_user_name(session["user_id"])
 
     if request.method == "GET":
 
-        notesdicts = db.execute(
-            "SELECT * FROM notes where id = ? ORDER BY serial DESC", session["user_id"])
+        notesdicts = obj.fetch_notes(session["user_id"])
 
         return render_template("notes.html", notesdicts=notesdicts, currentuser=currentuser)
 
@@ -383,11 +355,7 @@ def notes():
 
         notes = request.form.get("notes")
 
-        db.execute("INSERT INTO notes(id, data, date) \
-            VALUES(?, ?, (SELECT DATETIME('now','localtime')))",
-                   session["user_id"], notes)
-
-        notesdicts = db.execute("SELECT * FROM notes")
+        obj.insert_note(session["user_id"], notes)
 
         flash('Note Added !!!')
         return redirect("/notes")
@@ -397,7 +365,7 @@ def notes():
 @login_required
 def delnotes():
     serial = request.form.get("serial")
-    db.execute("DELETE FROM notes WHERE serial = ?", serial)
+    obj.delete_note_by_serial(serial)
     flash('Note Deleted !!!')
     return redirect("/notes")
 
@@ -407,9 +375,7 @@ def delnotes():
 def motivation():
 
     # Fetching name of current user
-    currentuser = db.execute(
-        "SELECT username FROM users WHERE id = ?", session["user_id"])
-    currentuser = currentuser[0]["username"]
+    currentuser = obj.fetch_user_name(session["user_id"])
 
     """Show user motivational quotes"""
     random_num = random.choice(data)
@@ -422,14 +388,7 @@ def motivation():
 def reset():
     """Reset all current user data"""
 
-    db.execute("UPDATE users SET cash = 10000 WHERE id = ?",
-               session["user_id"])
-    db.execute("DELETE FROM history WHERE id = ?",
-               session["user_id"])
-    db.execute("DELETE FROM liveindex WHERE id = ?",
-               session["user_id"])
-    db.execute("DELETE FROM notes WHERE id = ?",
-               session["user_id"])
+    obj.reset_user_data(session["user_id"])
 
     flash('Reset Successful !!!')
     return redirect("/")
@@ -451,9 +410,8 @@ def changepass():
     if password != confirmation:
         return apology("Passwords do not match (case sensitive)")
 
-     # Inserting user details in table
-    db.execute("UPDATE users set hash = ? where id = ?",
-               generate_password_hash(password), session["user_id"])
+    # Updating user password
+    obj.update_user_password(generate_password_hash(password), session["user_id"])
 
     session.clear()
 
