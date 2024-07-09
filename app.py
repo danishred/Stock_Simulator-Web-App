@@ -14,7 +14,6 @@ app = Flask(__name__)
 os.environ.get('KV_URL')
 
 app.config["SESSION_PERMANENT"] = True  # Make the session permanent
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)  # Set session lifetime to 7 days
 app.config["SESSION_TYPE"] = "redis"  # Use Redis for session storage
 app.config["SESSION_REDIS"] = Redis.from_url(os.environ.get('KV_URL')) # Configure redis connection
 
