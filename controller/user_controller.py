@@ -1,11 +1,13 @@
 from decimal import Decimal
 from app import app
-from flask import json, flash, redirect, render_template, request, session
+from flask import json, jsonify, flash, redirect, render_template, request, session
 from helpers import apology, login_required, lookup, usd
 from werkzeug.security import check_password_hash, generate_password_hash
 import random
 from dotenv import load_dotenv # Allows loading environment variables
 from model.user_model import user_model
+import re
+
 
 # obj for user_model
 obj = user_model()
@@ -120,31 +122,30 @@ def buy():
 
         # Fetching latest details of current stock
         buystks = lookup(symbol.upper())
-        if buystks is None:
+        if buystks == None:
             return apology("invalid symbol")
 
-        if usrcsh < float(shares) * buystks["price"]:
+        if usrcsh < float(shares)*(buystks["price"]):
             return apology("insufficient funds")
+
 
         # Fetching shares bought before
         prevshr = obj.fetching_shares_bought(session["user_id"], symbol.upper())
 
         # Total previously bought share of the stock
-        liveshares = prevshr[0] if prevshr is not None else 0
+        liveshares = prevshr
 
         # Inserting stock details if bought first time
         if liveshares == 0:
             obj.insert_liveindex(session["user_id"], symbol.upper(), shares, buystks["price"])
-        
-        # Ensure liveshares is initialized properly
-        if liveshares is None:
-            liveshares = 0
-            
-        # Updating hisstory table for the current share bought
+
+        # Updating history table for the current share bought
         obj.insert_history(session["user_id"], symbol.upper(), shares, buystks["price"])
 
         # Updating total shares bought
         liveshares += int(shares)
+
+        # Update the liveindex with the new total shares
         obj.update_liveindex_shares(liveshares, session["user_id"], symbol.upper())
 
         # Debiting cash
@@ -251,16 +252,16 @@ def register():
     if request.method == "POST":
 
         # Fetching info provided by user
-        username = request.form.get("username")
+        email = request.form.get("email")
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
 
         # Performing checks
-        if obj.fetch_user_by_username(username):
+        if obj.fetch_user_by_username(email):
             return apology("username already exists")
 
-        if not username:
-            return apology("must provide username")
+        if not email:
+            return apology("must provide email")
 
         if not password:
             return apology("must provide password")
@@ -271,13 +272,36 @@ def register():
         if password != confirmation:
             return apology("Passwords do not match (case sensitive)")
 
-        # Inserting user details in table
-        obj.insert_user(username, generate_password_hash(password))
+        # Normalize Email    
+        email = email.lower()# Email validation
 
+        # Email validation
+        if len(email) < 3:
+            return apology("email must be at least 3 characters long")
+
+        if " " in email:
+            return apology("whitespace not allowed")
+            
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):  
+            return apology("Please enter a valid E-mail")  
+
+        # Password Validation
+        if " " in password:
+            return apology("whitespace not allowed")
+
+        pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"
+            
+        if not re.match(pattern, password):
+            return apology("The password should contain at least one lowercase letter, one uppercase letter, one digit, and one special character")
+
+        # Inserting user details in table
+        obj.insert_user(email, generate_password_hash(password))
+       
+        flash('User Registered Successfully !!!')
         return redirect("/")
+    
     # Conditions for GET
     if request.method == "GET":
-        flash('User Registered Successfully !!!')
         return render_template("register.html")
 
 
@@ -303,23 +327,24 @@ def sell():
             return apology("missing shares")
 
         # Total shares of current stock
-        sharescnt = obj.fetch_liveindex_shares(session["user_id"], symbol.upper())
+        sharescnt = obj.fetch_user_shares(session["user_id"], symbol.upper())
         if not sharescnt:
             return apology("you don't own any shares of this stock")
 
-        if int(shares) > int(sharescnt[0]["liveshares"]):
+        if int(shares) > int(sharescnt):
             return apology("you don't possess that many shares")
 
         # Updating no. of shares possessed after selling
         sellstks = lookup(symbol.upper())
-        obj.update_liveindex_shares(int(sharescnt[0]["liveshares"]) - int(shares), session["user_id"], symbol.upper())
+        obj.update_liveindex_shares(int(sharescnt) - int(shares), session["user_id"], symbol.upper())
 
         # Updating history table for the current share sold
         obj.insert_history(session["user_id"], symbol.upper(), -int(shares), sellstks["price"])
 
         # Crediting cash in users account
-        usrcsh = obj.fetch_total_cash()
-        obj.update_user_cash(usrcsh + float(shares) * sellstks["price"], session["user_id"])
+        usrcsh = obj.fetch_total_cash(session["user_id"])
+        sell_price = Decimal(sellstks["price"])
+        obj.update_user_cash(usrcsh + Decimal(shares) * sell_price, session["user_id"])
 
         # Deleting shares that have 0 stocks
         obj.delete_zero_shares()
@@ -401,6 +426,7 @@ def changepass():
     password = request.form.get("password")
     confirmation = request.form.get("confirmation")
 
+    # Password Validation
     if not password:
         return apology("must provide password")
 
@@ -409,6 +435,14 @@ def changepass():
 
     if password != confirmation:
         return apology("Passwords do not match (case sensitive)")
+    
+    if " " in password:
+        return apology("whitespace not allowed")
+
+    pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"
+        
+    if not re.match(pattern, password):
+        return apology("The password should contain at least one lowercase letter, one uppercase letter, one digit, and one special character")
 
     # Updating user password
     obj.update_user_password(generate_password_hash(password), session["user_id"])

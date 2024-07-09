@@ -26,8 +26,8 @@ class user_model():
                 )
                 """)
                 cursor.execute("""
-                CREATE TABLE IF NOT EXISTS notes ( serial SERIAL PRIMARY KEY, id INTEGER NOT NULL, data BYTEA,
-                date TIMESTAMP NOT NULL
+                CREATE TABLE IF NOT EXISTS notes ( serial SERIAL PRIMARY KEY, id INTEGER NOT NULL, data TEXT NOT NULL,
+                date TEXT NOT NULL
                 )
                 """)
                 cursor.execute("""
@@ -115,7 +115,7 @@ class user_model():
         connection = psycopg2.connect(url)
         with connection:
             with connection.cursor() as cursor:
-                cursor.execute("INSERT INTO history(id, symbol, shares, price, date) VALUES(%s, %s, %s, %s, (SELECT NOW()))",
+                cursor.execute("INSERT INTO history(id, symbol, shares, price, date) VALUES(%s, %s, %s, %s, (SELECT TO_CHAR(NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD HH24:MI:SS')))",
                             (user_id, symbol, shares, price))
 
     def fetch_history(self, user_id):
@@ -150,7 +150,7 @@ class user_model():
             with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
                 cursor.execute("SELECT liveshares FROM liveindex WHERE id = %s AND symbol = %s", (user_id, symbol))
                 shares = cursor.fetchone()
-                return shares
+                return shares[0] if shares[0] is not None else 0
 
     def delete_zero_shares(self):
         url = os.getenv("POSTGRES_URL")
@@ -164,7 +164,8 @@ class user_model():
         connection = psycopg2.connect(url)
         with connection:
             with connection.cursor() as cursor:
-                cursor.execute("INSERT INTO notes(id, data, date) VALUES(%s, %s, (SELECT NOW()))", (user_id, notes))
+                cursor.execute("INSERT INTO notes(id, data, date) \
+                               VALUES(%s, %s, (SELECT TO_CHAR(NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD HH24:MI:SS')))", (user_id, notes))
 
     def fetch_notes(self, user_id):
         url = os.getenv("POSTGRES_URL")
@@ -173,8 +174,8 @@ class user_model():
             with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
                 cursor.execute("SELECT * FROM notes WHERE id = %s ORDER BY serial DESC", (user_id,))
                 notes = cursor.fetchall()
-                return notes
-
+                return [dict(note) for note in notes]  # Convert to list of dicts
+            
     def delete_note_by_serial(self, serial):
         url = os.getenv("POSTGRES_URL")
         connection = psycopg2.connect(url)
@@ -192,7 +193,7 @@ class user_model():
                 cursor.execute("DELETE FROM liveindex WHERE id = %s", (user_id,))
                 cursor.execute("DELETE FROM notes WHERE id = %s", (user_id,))
 
-    def update_user_password(self, user_id, hashed_password):
+    def update_user_password(self, hashed_password, user_id):
         url = os.getenv("POSTGRES_URL")
         connection = psycopg2.connect(url)
         with connection:
@@ -215,4 +216,5 @@ class user_model():
             with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
                 cursor.execute("SELECT SUM(liveshares) FROM liveindex WHERE id = %s AND symbol = %s", (user_id, symbol))
                 shares = cursor.fetchone()
-                return shares
+                # Ensure the function returns 0 if there are no previous shares
+                return shares[0] if shares[0] is not None else 0
