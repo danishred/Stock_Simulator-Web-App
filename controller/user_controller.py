@@ -1,12 +1,12 @@
-from decimal import Decimal
-from app import app
-from flask import json, jsonify, flash, redirect, render_template, request, session
-from helpers import apology, login_required, lookup, usd
-from werkzeug.security import check_password_hash, generate_password_hash
+import re
 import random
+from app import app
+from decimal import Decimal
 from dotenv import load_dotenv # Allows loading environment variables
 from model.user_model import user_model
-import re
+from helpers import apology, login_required, lookup, usd
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask import json, flash, redirect, render_template, request, session
 
 
 # obj for user_model

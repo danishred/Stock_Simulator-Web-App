@@ -1,10 +1,10 @@
-from flask import Flask 
-from flask_session import Session
-from flask_cors import CORS
+import os
 from redis import Redis
+from flask import Flask 
+from flask_cors import CORS
 from dotenv import load_dotenv
 from datetime import timedelta
-import os
+from flask_session import Session
 
 load_dotenv()
 
