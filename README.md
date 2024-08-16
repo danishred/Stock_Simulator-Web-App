@@ -32,6 +32,7 @@ and is populated with different section as we move towards right namely **Quote*
 
 'Reset Data' option also opens up a Modal. It resets the following to its default
 settings:
+
 - Your cash back to default
 - All the shares you've purchased
 - All your notes back to default
