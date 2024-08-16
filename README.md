@@ -39,9 +39,9 @@ settings:
 - All your purchase history
 
 ## Final Thoughts:
--The project took a lot of effort to be completed. 
--Initially I used SQLite3 DB but later on switched to PostgreSQL for deployment constraints. 
--I also refactored the whole codebase months after project creation with MVC Architecture, further increasing understanding and ease of making future changes
--I really enjoyed reading documentations and I am proud that I did it all myself. 
+- The project took a lot of effort to be completed. 
+- Initially I used SQLite3 DB but later on switched to PostgreSQL for deployment constraints. 
+- I also refactored the whole codebase months after project creation with MVC Architecture, further increasing understanding and ease of making future changes
+- I really enjoyed reading documentations and I am proud that I did it all myself. 
 
 Thank you for reading.
