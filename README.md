@@ -3,8 +3,8 @@
 ## Description:
 ### General
 The project is a web-application. It is simply an application which allows one to
-practice trading stocks. But it is not just that as I have worked on a section which
-can store notes as well and can be used by multiple users, each having there data kept
+practice trading stocks. But it is not just that as it also contains a section which
+can store notes and can be used by multiple users, each having there data kept
 separate from the other. Also there is a Motivation section which displays inspiring
 quotes from various authors, helping the user to stay motivated.
 
@@ -15,18 +15,18 @@ quotes from various authors, helping the user to stay motivated.
 - JavaScript
 - Bootstrap
 - Python
-- Flask
-- Sqlite3
+- Flask (Framework)
+- Postgresql (Database)
+- Redis KV Database (Session Storage)
 - Memegen API
-- IexCloud API
+- Yahoo API
 - other small libraries
 
 ### What it does and how?
 When you access the homepage it allows you to login if you are an existing user else
-you can register yourself from the register section. Each user is provided with unique
-username and their password should be at least 8 digits long and is stored in the form
-of hash inside the database. Each username is checked in the database and if it is found
-there the user is prompted to choose any other username.
+you can register yourself from the register section. Each user should provide their
+Email and their password should be at least 8 digits long and is stored in the form
+of hash inside the database.
 
 After logging in the user is greeted with a **Portfolio** (We will talk about it later).
 On the top there is a navbar and starting from left it has the title of webpage and
