@@ -1,4 +1,5 @@
 import requests
+import yfinance as yf
 
 from flask import redirect, render_template, session
 from functools import wraps
@@ -46,15 +47,23 @@ def login_required(f):
 
 
 def lookup(symbol):
-    """Look up quote for symbol."""
-    url = f"https://finance.cs50.io/quote?symbol={symbol.upper()}"
     try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an error for HTTP error responses
-        quote_data = response.json()
+        # Define the ticker symbol
+        ticker = symbol.upper()
+
+        # Get the ticker object
+        stock = yf.Ticker(ticker)
+
+        info = stock.info
+
+        # Get real-time price data
+        price = stock.history(period="1d")['Close'].iloc[0]
+        
+        price = float(price)
+
         return {
-            "name": quote_data["companyName"],
-            "price": quote_data["latestPrice"],
+            "name": info['longName'],
+            "price": price,
             "symbol": symbol.upper()
         }
     except requests.RequestException as e:
