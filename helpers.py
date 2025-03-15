@@ -1,6 +1,6 @@
 import requests
 import os
-from flask import redirect, render_template, session
+from flask import redirect, render_template, session, abort
 from functools import wraps
 
 
@@ -47,7 +47,6 @@ def login_required(f):
 
 def lookup(symbol):
     """Look up live quote for symbol using Alpha Vantage API."""
-    # You'll need to get a free API key from https://www.alphavantage.co/support/#api-key
     api_key = os.environ.get("ALPHA_VANTAGE_API_KEY")
     if not api_key:
         print("Error: Alpha Vantage API key not found. Set it as an environment variable.")
@@ -57,23 +56,16 @@ def lookup(symbol):
     
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Raise an error for HTTP error responses
+        response.raise_for_status()
         data = response.json()
-        
-        # Check if we got valid data
-        if "Global Quote" not in data or not data["Global Quote"]:
-            print(f"Error: No data found for symbol {symbol}")
-            return None
-        
-            # Check if we've exceeded the API limit
-        if "Note" in data and "call frequency" in data["Note"]:
-            print("Error: Daily API call limit exceeded")
-            # Perhaps implement a fallback method here
-            return None
-                
+
+        # Check if API response contains a rate limit message
+        if isinstance(data, dict) and "Information" in data and "rate limit" in data["Information"].lower():
+            abort(429)  # Abort and trigger the error handler
+
         quote_data = data["Global Quote"]
         return {
-            "name": symbol.upper(),  # Alpha Vantage Global Quote doesn't include company name
+            "name": symbol.upper(),
             "price": float(quote_data["05. price"]), 
             "symbol": symbol.upper()
         }
@@ -82,6 +74,7 @@ def lookup(symbol):
     except (KeyError, ValueError) as e:
         print(f"Data parsing error: {e}")
     return None
+
 
 
 def usd(value):
