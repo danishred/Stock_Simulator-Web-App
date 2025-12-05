@@ -11,16 +11,9 @@ load_dotenv()
 # Configure application
 app = Flask(__name__)
 
-os.environ.get('KV_URL')
-
+redis_url = os.environ.get('REDIS_URL')
 app.config["SESSION_PERMANENT"] = True  # Make the session permanent
 app.config["SESSION_TYPE"] = "redis"  # Use Redis for session storage
-
-redis_url = os.environ.get('KV_URL')
-
-if redis_url.startswith('redis://'):
-    redis_url = 'rediss://' + redis_url[len('redis://'):]
-
 app.config["SESSION_REDIS"] = Redis.from_url(redis_url)
 
 # Initialize the session
