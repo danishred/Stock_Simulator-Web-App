@@ -46,6 +46,8 @@ typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.2
 webencodings==0.5.1
+vaderSentiment==3.3.2
+matplotlib==3.9.2
 Werkzeug==3.0.3
 yfinance==0.2.51
 zope.event==5.0

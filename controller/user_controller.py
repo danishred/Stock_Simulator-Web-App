@@ -4,7 +4,7 @@ from app import app
 from decimal import Decimal
 from dotenv import load_dotenv # Allows loading environment variables
 from model.user_model import user_model
-from helpers import apology, login_required, lookup, usd
+from helpers import apology, login_required, lookup, usd, get_sentiment_data
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import json, flash, redirect, render_template, request, session
 
@@ -218,10 +218,10 @@ def logout():
     return redirect("/")
 
 
-@app.route("/quote", methods=["GET", "POST"])
+@app.route("/research", methods=["GET", "POST"])
 @login_required
-def quote():
-    """Get stock quote."""
+def research():
+    """Get stock quote and sentiment analysis."""
     # Fetching name of current user
     currentuser = obj.fetch_user_name(session["user_id"])
 
@@ -241,7 +241,15 @@ def quote():
         if lookstks is None:
             return apology("invalid symbol provided")
 
-        return render_template("quoted.html", lookstks=lookstks, currentuser=currentuser)
+        sentiment_summary, sentiment_chart = get_sentiment_data(symbol.upper())
+
+        return render_template(
+            "quoted.html",
+            lookstks=lookstks,
+            currentuser=currentuser,
+            sentiment_summary=sentiment_summary,
+            sentiment_chart=sentiment_chart,
+        )
 
 
 @app.route("/register", methods=["GET", "POST"])

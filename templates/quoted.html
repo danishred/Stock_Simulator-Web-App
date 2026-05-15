@@ -1,14 +1,74 @@
 {% extends "layout.html" %}
 
 {% block title %}
-Quoted
+Research
 {% endblock %}
 
 {% block main %}
 
-
-<p class="solid container"  style="font-size: xx-large; font-family: 'Courier New';">
-    
+<p class="solid container" style="font-size: xx-large; font-family: 'Courier New';">
     A share of {{ lookstks.name }} ({{ lookstks.symbol }}) costs <br><br> {{ lookstks.price | usd }} <br>
 </p>
+
+<hr class="container" style="max-width: 600px; margin: 1.5rem auto;">
+
+{% if sentiment_chart %}
+<div class="container text-center mt-2" style="max-width: 680px;">
+    <h5 style="font-family: 'Courier New'; margin-bottom: 1rem;">
+        Market Sentiment — {{ lookstks.symbol }}
+    </h5>
+
+    <img src="data:image/png;base64,{{ sentiment_chart }}"
+        alt="Sentiment distribution pie chart for {{ lookstks.symbol }}" class="img-fluid rounded shadow-sm"
+        style="max-width: 480px;">
+
+    <div class="mt-4 text-start"
+        style="font-family: Arial, sans-serif; font-size: 0.95rem; color: #333; max-width: 580px; margin: 1.5rem auto 0;">
+        <p>
+            This pie chart shows the <strong>market sentiment</strong> for
+            <strong>{{ lookstks.symbol }}</strong>, derived from the analysis of up to
+            <strong>100 recent news articles</strong> retrieved from financial and general
+            news sources. Each article is scored using
+            <em>VADER (Valence Aware Dictionary and sEntiment Reasoner)</em> — a
+            rule-based natural-language model — and classified into one of three categories:
+        </p>
+        <ul>
+            <li>
+                <span style="color:#4CAF50; font-weight:600;">Positive</span> —
+                Articles conveying favorable news such as strong earnings, product launches,
+                partnerships, or analyst upgrades.
+            </li>
+            <li>
+                <span style="color:#9E9E9E; font-weight:600;">Neutral</span> —
+                Articles with a balanced or purely informational tone, neither notably
+                optimistic nor pessimistic.
+            </li>
+            <li>
+                <span style="color:#F44336; font-weight:600;">Negative</span> —
+                Articles covering unfavorable developments such as lawsuits, regulatory
+                actions, earnings misses, or leadership issues.
+            </li>
+        </ul>
+        <p>
+            The distribution reflects the overall tone of recent media coverage and can
+            serve as a general pulse on market mood surrounding this stock.
+        </p>
+        <p style="font-size: 0.82rem; color: #888;">
+            <em>
+                Sentiment data is informational only and is based on news article descriptions,
+                not full article content. This is not financial advice.
+            </em>
+        </p>
+    </div>
+</div>
+
+{% else %}
+<div class="container text-center mt-3" style="max-width: 600px;">
+    <p style="color: #888; font-family: Arial, sans-serif; font-size: 0.95rem;">
+        Sentiment analysis is not working since for some reason we cannot reach the
+        news API to analyze the sentiment. Extremely sorry for the inconvenience.
+    </p>
+</div>
+{% endif %}
+
 {% endblock %}
