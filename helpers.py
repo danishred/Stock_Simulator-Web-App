@@ -96,7 +96,7 @@ def usd(value):
 
 
 def _fetch_news_articles(stock_ticker):
-    """Fetch up to 100 news article descriptions for the given ticker via NewsAPI."""
+    """Fetch up to 100 news articles for the given ticker via NewsAPI."""
     api_key = os.environ.get("NEWS_API_KEY")
     if not api_key:
         return []
@@ -108,7 +108,7 @@ def _fetch_news_articles(stock_ticker):
     response.raise_for_status()
     news_data = response.json()
     return [
-        article["description"]
+        article
         for article in news_data.get("articles", [])
         if article.get("description")
     ]
@@ -142,16 +142,31 @@ def get_sentiment_data(stock_ticker):
     Fetch recent news for *stock_ticker*, run VADER sentiment analysis, and
     generate a pie chart.
 
-    Returns a tuple (summary_dict, base64_png_str) on success, or
-    (None, None) if the News API is unreachable or returns no articles.
+    Returns a tuple (summary_dict, base64_png_str, articles_list) on success,
+    or (None, None, []) if the News API is unreachable or returns no articles.
+    Each item in articles_list is a dict with keys: title, description, url,
+    source, published_at, sentiment.
     """
     try:
-        articles = _fetch_news_articles(stock_ticker)
-        if not articles:
-            return None, None
+        raw_articles = _fetch_news_articles(stock_ticker)
+        if not raw_articles:
+            return None, None, []
 
-        sentiments = [_analyze_sentiment_vader(a) for a in articles]
+        descriptions = [a["description"] for a in raw_articles]
+        sentiments = [_analyze_sentiment_vader(d) for d in descriptions]
         summary = _summarize_sentiments(sentiments)
+
+        articles = [
+            {
+                "title": a.get("title") or "No title",
+                "description": a.get("description", ""),
+                "url": a.get("url") or "#",
+                "source": (a.get("source") or {}).get("name", "Unknown"),
+                "published_at": (a.get("publishedAt") or "")[:10],
+                "sentiment": sentiment,
+            }
+            for a, sentiment in zip(raw_articles, sentiments)
+        ]
 
         df = pd.DataFrame(sentiments, columns=["Sentiment"])
         df = df["Sentiment"].value_counts().reset_index()
@@ -181,7 +196,7 @@ def get_sentiment_data(stock_ticker):
         img_b64 = base64.b64encode(buf.read()).decode("utf-8")
         plt.close(fig)
 
-        return summary, img_b64
+        return summary, img_b64, articles
 
     except Exception:
-        return None, None
+        return None, None, []
