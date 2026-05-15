@@ -18,9 +18,10 @@ Research
         Market Sentiment — {{ lookstks.symbol }}
     </h5>
 
-    <img src="data:image/png;base64,{{ sentiment_chart }}"
-        alt="Sentiment distribution pie chart for {{ lookstks.symbol }}" class="img-fluid rounded shadow-sm"
-        style="max-width: 480px;">
+    <div style="max-width: 480px; margin: 0 auto;">
+        <img src="data:image/png;base64,{{ sentiment_chart }}"
+            alt="Sentiment distribution pie chart for {{ lookstks.symbol }}" class="img-fluid rounded shadow-sm w-100">
+    </div> 
 
     <div class="mt-4 text-start"
         style="font-family: Arial, sans-serif; font-size: 0.95rem; color: #333; max-width: 580px; margin: 1.5rem auto 0;">
