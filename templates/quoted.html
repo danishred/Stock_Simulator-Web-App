@@ -7,7 +7,7 @@ Research
 {% block main %}
 
 <p class="solid container" style="font-size: xx-large; font-family: 'Courier New';">
-    A share of ({{ lookstks.symbol }}) costs <br><br> {{ lookstks.price | usd }} <br>
+    A share of ({{ lookstks.name }}) costs <br><br> {{ lookstks.price | usd }} <br>
 </p>
 
 <hr class="container" style="max-width: 600px; margin: 1.5rem auto;">
@@ -15,7 +15,7 @@ Research
 {% if sentiment_chart %}
 <div class="container text-center mt-2" style="max-width: 680px;">
     <h5 style="font-family: 'Courier New'; margin-bottom: 1rem;">
-        Market Sentiment — {{ lookstks.symbol }}
+        Market Sentiment — {{ lookstks.name }}
     </h5>
 
     <div style="max-width: 480px; margin: 0 auto;">
@@ -27,7 +27,7 @@ Research
         style="font-family: Arial, sans-serif; font-size: 0.95rem; color: #333; max-width: 580px; margin: 1.5rem auto 0;">
         <p>
             This pie chart shows the <strong>market sentiment</strong> for
-            <strong>{{ lookstks.symbol }}</strong>, derived from the analysis of up to
+            <strong>{{ lookstks.name }}</strong>, derived from the analysis of up to
             <strong>100 recent news articles</strong> retrieved from financial and general
             news sources. Each article is scored using
             <em>VADER (Valence Aware Dictionary and sEntiment Reasoner)</em> — a

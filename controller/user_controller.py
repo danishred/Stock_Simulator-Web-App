@@ -248,7 +248,7 @@ def research():
             return apology("invalid symbol provided")
 
         sentiment_summary, sentiment_chart, articles = get_sentiment_data(
-            symbol.upper()
+            lookstks["name"]
         )
 
         return render_template(

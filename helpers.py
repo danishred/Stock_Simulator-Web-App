@@ -11,6 +11,8 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from flask import redirect, render_template, session, abort
 from functools import wraps
 
+from services.finnhub_service import get_stock_quote, FinnhubError
+
 
 def apology(message, code=400):
     """Render message as an apology to user."""
@@ -54,39 +56,21 @@ def login_required(f):
 
 
 def lookup(symbol):
-    """Look up live quote for symbol using Alpha Vantage API."""
-    api_key = os.environ.get("ALPHA_VANTAGE_API_KEY")
-    if not api_key:
-        print(
-            "Error: Alpha Vantage API key not found. Set it as an environment variable."
-        )
-        return None
-
-    url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol.upper()}&apikey={api_key}"
-
+    """Look up live quote for symbol using Finnhub API."""
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-
-        # Check if API response contains a rate limit message
-        if (
-            isinstance(data, dict)
-            and "Information" in data
-            and "rate limit" in data["Information"].lower()
-        ):
-            abort(429)  # Abort and trigger the error handler
-
-        quote_data = data["Global Quote"]
+        data = get_stock_quote(symbol.upper())
         return {
-            "name": symbol.upper(),
-            "price": float(quote_data["05. price"]),
-            "symbol": symbol.upper(),
+            "name": data.get("company_name") or data.get("symbol"),
+            "price": float(data.get("current_price")),
+            "symbol": data.get("symbol"),
         }
-    except requests.RequestException as e:
-        print(f"Request error: {e}")
-    except (KeyError, ValueError) as e:
-        print(f"Data parsing error: {e}")
+    except FinnhubError as e:
+        error_msg = str(e).lower()
+        if "rate limit" in error_msg:
+            abort(429)
+        print(f"Finnhub error: {e}")
+    except Exception as e:
+        print(f"Lookup error: {e}")
     return None
 
 
@@ -102,7 +86,7 @@ def _fetch_news_articles(stock_ticker):
         return []
     url = (
         f"https://newsapi.org/v2/everything"
-        f"?q={stock_ticker}&pageSize=100&apiKey={api_key}"
+        f"?q={stock_ticker}&pageSize=100&language=en&apiKey={api_key}"
     )
     response = requests.get(url, timeout=10)
     response.raise_for_status()
